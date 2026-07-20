@@ -1,0 +1,48 @@
+# =====================================================================
+# StayKonkan — Local development stack
+# Run with: docker compose up --build
+# Brings up Postgres + the backend together, wired via environment
+# variables so nothing is hardcoded (Phase 1: AWS/Docker-ready).
+# =====================================================================
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: staykonkan-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: staykonkan_dev
+      POSTGRES_USER: staykonkan
+      POSTGRES_PASSWORD: staykonkan
+    ports:
+      - "5432:5432"
+    volumes:
+      - staykonkan_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U staykonkan"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: staykonkan-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/staykonkan_dev
+      DB_USERNAME: staykonkan
+      DB_PASSWORD: staykonkan
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET must be set -- generate with 'openssl rand -base64 64'}"
+      CORS_ALLOWED_ORIGINS: http://localhost:5173
+    ports:
+      - "8080:8080"
+
+volumes:
+  staykonkan_pg_data:
