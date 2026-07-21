@@ -47,6 +47,9 @@ public class PropertyMapper {
         response.setImageUrls(property.getImageUrls());
         response.setPropertyStatus(property.getPropertyStatus());
 
+        response.setAverageRating(property.getAverageRating());
+        response.setTotalReviews(property.getTotalReviews());
+
         if (property.getOwner() != null) {
             response.setOwnerId(property.getOwner().getId());
             response.setOwnerName(property.getOwner().getFullName());

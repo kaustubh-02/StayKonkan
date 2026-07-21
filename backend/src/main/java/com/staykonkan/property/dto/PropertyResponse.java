@@ -43,6 +43,10 @@ public class PropertyResponse {
 
     private String ownerName;
 
+    private BigDecimal averageRating;
+
+    private Integer totalReviews;
+
     private Instant createdAt;
 
     private Instant updatedAt;
