@@ -8,9 +8,11 @@ import com.staykonkan.property.entity.Property;
 import com.staykonkan.property.mapper.PropertyMapper;
 import com.staykonkan.property.repository.PropertyRepository;
 import com.staykonkan.property.service.PropertyService;
+import com.staykonkan.propertyimage.repository.PropertyImageRepository;
 import com.staykonkan.security.SecurityUserPrincipal;
 import com.staykonkan.user.entity.User;
 import com.staykonkan.user.repository.UserRepository;
+import com.staykonkan.wishlist.repository.WishlistRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -26,15 +28,21 @@ public class PropertyServiceImpl implements PropertyService {
     private final PropertyRepository propertyRepository;
     private final UserRepository userRepository;
     private final PropertyMapper propertyMapper;
+    private final WishlistRepository wishlistRepository;
+    private final PropertyImageRepository propertyImageRepository;
 
     public PropertyServiceImpl(
             PropertyRepository propertyRepository,
             UserRepository userRepository,
-            PropertyMapper propertyMapper
+            PropertyMapper propertyMapper,
+            WishlistRepository wishlistRepository,
+            PropertyImageRepository propertyImageRepository
     ) {
         this.propertyRepository = propertyRepository;
         this.userRepository = userRepository;
         this.propertyMapper = propertyMapper;
+        this.wishlistRepository = wishlistRepository;
+        this.propertyImageRepository = propertyImageRepository;
     }
 
     @Override
@@ -108,6 +116,16 @@ public class PropertyServiceImpl implements PropertyService {
 
         Property property = propertyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Property not found"));
+
+        // Business rule: deleting a property must also remove any wishlist
+        // records that reference it (Module 6), or the FK would orphan/block.
+        wishlistRepository.deleteAllByProperty(property);
+
+        // Same FK-safety reasoning for property images (Module 7). Note:
+        // this removes the DB rows only; deleting the underlying Cloudinary
+        // assets is a housekeeping concern outside PropertyServiceImpl's
+        // scope and would need a small async cleanup job if pursued.
+        propertyImageRepository.deleteAllByProperty(property);
 
         propertyRepository.delete(property);
     }
