@@ -1,5 +1,6 @@
 package com.staykonkan.booking.service.impl;
 
+import com.staykonkan.availability.service.PropertyAvailabilityService;
 import com.staykonkan.booking.dto.BookingResponse;
 import com.staykonkan.booking.dto.CreateBookingRequest;
 import com.staykonkan.booking.dto.UpdateBookingStatusRequest;
@@ -46,6 +47,7 @@ public class BookingServiceImpl implements BookingService {
     private final PropertyRepository propertyRepository;
     private final UserRepository userRepository;
     private final BookingMapper bookingMapper;
+    private final PropertyAvailabilityService availabilityService;
 
     @Override
     public BookingResponse createBooking(CreateBookingRequest request) {
@@ -81,6 +83,18 @@ public class BookingServiceImpl implements BookingService {
 
         if (overlapping) {
             throw new ValidationException("Property is already booked for the selected dates");
+        }
+
+        // Second, independent guard: existing overlap check above only
+        // looks at other Bookings (PENDING/CONFIRMED). This also rejects
+        // dates the owner has explicitly BLOCKED or marked MAINTENANCE
+        // via the availability calendar (Module 9), which the Booking
+        // table alone has no knowledge of. The authoritative,
+        // race-condition-safe reservation still happens in
+        // availabilityService.bookDates() at confirmation time below.
+        if (!availabilityService.checkAvailability(property.getId(), checkInDate, checkOutDate)) {
+            throw new ValidationException(
+                    "Selected dates are not available (blocked by the host or under maintenance)");
         }
 
         long nights = ChronoUnit.DAYS.between(checkInDate, checkOutDate);
@@ -157,6 +171,10 @@ public class BookingServiceImpl implements BookingService {
 
         validateStatusTransition(booking.getStatus(), BookingStatus.CANCELLED);
 
+        // Safe even if this booking was never CONFIRMED (PENDING
+        // cancellations are a no-op here — see releaseBookingDates doc).
+        availabilityService.releaseBookingDates(booking.getId());
+
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setCancelledAt(LocalDateTime.now());
     }
@@ -177,6 +195,20 @@ public class BookingServiceImpl implements BookingService {
         BookingStatus targetStatus = request.getStatus();
 
         validateStatusTransition(booking.getStatus(), targetStatus);
+
+        // Mutate the authoritative availability calendar BEFORE flipping
+        // the booking's own status, so that if bookDates() throws (dates
+        // no longer available — e.g. a race with another confirmation,
+        // or the host blocked the dates after this booking was created),
+        // the whole transaction rolls back and the booking stays in its
+        // current status rather than ending up CONFIRMED with no
+        // corresponding BOOKED calendar rows.
+        if (targetStatus == BookingStatus.CONFIRMED) {
+            availabilityService.bookDates(
+                    booking.getProperty().getId(), booking.getCheckInDate(), booking.getCheckOutDate(), booking.getId());
+        } else if (targetStatus == BookingStatus.CANCELLED) {
+            availabilityService.releaseBookingDates(booking.getId());
+        }
 
         booking.setStatus(targetStatus);
 
