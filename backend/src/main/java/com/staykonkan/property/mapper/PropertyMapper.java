@@ -1,13 +1,22 @@
 package com.staykonkan.property.mapper;
 
+import com.staykonkan.amenity.mapper.AmenityMapper;
 import com.staykonkan.property.dto.CreatePropertyRequest;
 import com.staykonkan.property.dto.PropertyResponse;
 import com.staykonkan.property.entity.Property;
 import com.staykonkan.user.entity.User;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class PropertyMapper {
+
+    private final AmenityMapper amenityMapper;
+
+    public PropertyMapper(AmenityMapper amenityMapper) {
+        this.amenityMapper = amenityMapper;
+    }
 
     public Property toEntity(CreatePropertyRequest request, User owner) {
 
@@ -44,6 +53,17 @@ public class PropertyMapper {
         response.setBedrooms(property.getBedrooms());
         response.setBathrooms(property.getBathrooms());
         response.setAmenities(property.getAmenities());
+
+        if (property.getAmenityList() != null) {
+            response.setAmenityDetails(
+                    property.getAmenityList().stream()
+                            .map(amenityMapper::toResponse)
+                            .toList()
+            );
+        } else {
+            response.setAmenityDetails(List.of());
+        }
+
         response.setImageUrls(property.getImageUrls());
         response.setPropertyStatus(property.getPropertyStatus());
 

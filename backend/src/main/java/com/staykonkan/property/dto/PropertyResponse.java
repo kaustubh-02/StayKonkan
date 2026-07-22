@@ -1,11 +1,13 @@
 package com.staykonkan.property.dto;
 
+import com.staykonkan.amenity.dto.AmenityResponse;
 import com.staykonkan.property.entity.PropertyStatus;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 @Getter
 @Setter
@@ -34,6 +36,10 @@ public class PropertyResponse {
     private Integer bathrooms;
 
     private String amenities;
+
+    // Structured, catalog-backed amenities (Module 8) — the legacy free-text
+    // `amenities` field above is untouched for backward compatibility.
+    private List<AmenityResponse> amenityDetails;
 
     private String imageUrls;
 

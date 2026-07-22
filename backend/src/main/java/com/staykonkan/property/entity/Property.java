@@ -1,5 +1,6 @@
 package com.staykonkan.property.entity;
 
+import com.staykonkan.amenity.entity.Amenity;
 import com.staykonkan.entity.AuditableEntity;
 import com.staykonkan.user.entity.User;
 import jakarta.persistence.*;
@@ -10,6 +11,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "properties")
@@ -70,4 +73,17 @@ public class Property extends AuditableEntity {
     @Column(nullable = false)
     @Builder.Default
     private Integer totalReviews = 0;
+
+    // Structured, catalog-backed amenities (Module 8). Kept as a separate
+    // field from the legacy free-text `amenities` String column above —
+    // that column stays untouched so existing Create/Update/Response DTOs
+    // and PropertyMapper logic built against it keep working unmodified.
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "property_amenities",
+            joinColumns = @JoinColumn(name = "property_id"),
+            inverseJoinColumns = @JoinColumn(name = "amenity_id")
+    )
+    @Builder.Default
+    private Set<Amenity> amenityList = new HashSet<>();
 }
