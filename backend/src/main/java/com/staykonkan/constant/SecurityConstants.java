@@ -30,6 +30,11 @@ public final class SecurityConstants {
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/actuator/health",
-            "/actuator/info"
+            "/actuator/info",
+            // Module 10B: called server-to-server by Razorpay, never by a
+            // logged-in user — authenticity is instead guaranteed by
+            // WebhookSignatureVerifier checking X-Razorpay-Signature
+            // against the raw body, not by a JWT.
+            "/api/v1/payments/webhook"
     };
 }

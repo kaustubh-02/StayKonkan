@@ -96,6 +96,13 @@
             <version>2.0.0</version>
         </dependency>
 
+        <!-- Razorpay (Module 10A — Payment Foundation) -->
+        <dependency>
+            <groupId>com.razorpay</groupId>
+            <artifactId>razorpay-java</artifactId>
+            <version>1.4.7</version>
+        </dependency>
+
         <!-- MapStruct -->
         <dependency>
             <groupId>org.mapstruct</groupId>

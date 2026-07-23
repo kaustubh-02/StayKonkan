@@ -224,6 +224,27 @@ public class BookingServiceImpl implements BookingService {
         return bookingMapper.toResponse(booking);
     }
 
+    @Override
+    public BookingResponse confirmAfterPayment(Long bookingId) {
+
+        Booking booking = findByIdOrThrow(bookingId);
+
+        validateStatusTransition(booking.getStatus(), BookingStatus.CONFIRMED);
+
+        // Same authoritative, race-condition-safe reservation used by the
+        // owner/admin manual-confirm path in updateBookingStatus — see
+        // that method's comment for why this happens before the status
+        // flip, and PropertyAvailabilityServiceImpl.bookDates for the
+        // pessimistic-lock mechanics.
+        availabilityService.bookDates(
+                booking.getProperty().getId(), booking.getCheckInDate(), booking.getCheckOutDate(), booking.getId());
+
+        booking.setStatus(BookingStatus.CONFIRMED);
+        booking.setConfirmedAt(LocalDateTime.now());
+
+        return bookingMapper.toResponse(booking);
+    }
+
     // ------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------
